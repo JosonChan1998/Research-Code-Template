@@ -1,17 +1,16 @@
 import cv2
 import os
-import copy
 import torch
 import numpy as np
 
 from torch.nn import functional as F
 
-from cv2 import IMREAD_UNCHANGED
-
 # transpose
 FLIP_LEFT_RIGHT = 0
 FLIP_TOP_BOTTOM = 1
 
+# class flip map
+FLIP_MAP = ([14, 15], [16, 17], [18, 19])
 
 class SemanticSegmentation(object):
 
@@ -20,14 +19,14 @@ class SemanticSegmentation(object):
         self.class_ids = class_ids
         self.mode = mode
 
+        # convert to torch.Tensor
         semseg = self.convert_semseg(semseg, class_ids) if isinstance(semseg, list) else semseg
         if isinstance(semseg, torch.Tensor):
-            # The raw data representation is passed as argument
-            semseg = semseg.clone()
+            pass
         elif isinstance(semseg, (list, tuple, np.ndarray)):
             semseg = torch.as_tensor(semseg)
 
-        # single channel
+        # check single channel
         semseg = semseg.unsqueeze(0) if len(semseg.shape) == 2 else semseg
         assert len(semseg.shape) == 3 and semseg.shape[0] == 1
 
@@ -54,7 +53,6 @@ class SemanticSegmentation(object):
         flipped_semseg = self.semseg.flip(dim)
 
         if self.mode == 'pic':
-            from pet.utils.data.structures.parsing import FLIP_MAP
             flipped_semseg = flipped_semseg.numpy()
             for l_r in FLIP_MAP:
                 left = np.where(flipped_semseg == l_r[0])
@@ -94,7 +92,6 @@ class SemanticSegmentation(object):
             assert isinstance(size, (int, float))
             size = size, size
         width, height = map(int, size)
-        # width, height = int(width * float(scale) + 0.5), int(height * float(scale) + 0.5)
 
         assert width > 0
         assert height > 0

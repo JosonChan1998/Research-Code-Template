@@ -1,6 +1,6 @@
+import torch
 import numpy as np
 
-import torch
 # transpose
 FLIP_LEFT_RIGHT = 0
 FLIP_TOP_BOTTOM = 1
@@ -34,14 +34,30 @@ class BoxList(object):
         self.bbox = bbox
         self.size = image_size  # (image_width, image_height)
         self.mode = mode
+        self.extra_fields = {}
+
+    def add_field(self, field, field_data):
+        self.extra_fields[field] = field_data
+
+    def get_field(self, field):
+        return self.extra_fields[field]
+
+    def has_field(self, field):
+        return field in self.extra_fields
+
+    def fields(self):
+        return list(self.extra_fields.keys())
+
+    def _copy_extra_fields(self, bbox):
+        for k, v in bbox.extra_fields.items():
+            self.extra_fields[k] = v
 
     def convert(self, mode):
         if mode not in ("xyxy", "xywh"):
             raise ValueError("mode should be 'xyxy' or 'xywh'")
         if mode == self.mode:
             return self
-        # we only have two modes, so don't need to check
-        # self.mode
+        
         xmin, ymin, xmax, ymax = self._split_into_xyxy()
         if mode == "xyxy":
             bbox = torch.cat((xmin, ymin, xmax, ymax), dim=-1)
@@ -117,7 +133,7 @@ class BoxList(object):
             (scaled_xmin, scaled_ymin, scaled_xmax, scaled_ymax), dim=-1
         )
         bbox = BoxList(scaled_box, size, mode="xyxy")
-        # bbox._copy_extra_fields(self)
+        # for other filed
         for k, v in self.extra_fields.items():
             if not isinstance(v, (torch.Tensor, np.ndarray, list)):
                 v = v.resize(size, *args, **kwargs)
@@ -135,6 +151,7 @@ class BoxList(object):
 
         return self
     
+    # what's the parameter left_right meaning?
     def transpose(self, method, left_right=[]):
         """
         Transpose bounding box (flip or rotate in 90 degree steps)
@@ -174,7 +191,7 @@ class BoxList(object):
                 labels[left] = i[1]
                 labels[right] = i[0]
             bbox.add_field("labels", torch.tensor(labels))
-        # bbox._copy_extra_fields(self)
+        # for other field
         for k, v in self.extra_fields.items():
             if not isinstance(v, (torch.Tensor, np.ndarray, list)):
                 v = v.transpose(method)
