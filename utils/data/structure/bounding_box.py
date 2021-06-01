@@ -19,6 +19,8 @@ class BoxList(object):
     def __init__(self, bbox, image_size, mode="xyxy"):
         device = bbox.device if isinstance(bbox, torch.Tensor) else torch.device("cpu")
         bbox = torch.as_tensor(bbox, dtype=torch.float32, device=device)
+
+        # check the bbox shape [-1, 4]
         if bbox.ndimension() != 2:
             raise ValueError(
                 "bbox should have 2 dimensions, got {}".format(bbox.ndimension())
@@ -28,6 +30,7 @@ class BoxList(object):
                 "last dimension of bbox should have a "
                 "size of 4, got {}".format(bbox.size(-1))
             )
+
         if mode not in ("xyxy", "xywh"):
             raise ValueError("mode should be 'xyxy' or 'xywh'")
 

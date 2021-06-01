@@ -8,6 +8,7 @@ import numpy as np
 FLIP_LEFT_RIGHT = 0
 FLIP_TOP_BOTTOM = 1
 
+FLIP_MAP = ([14, 15], [16, 17], [18, 19])
 
 class Parsing(object):
     """
