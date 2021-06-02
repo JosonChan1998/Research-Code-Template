@@ -20,6 +20,11 @@ class Target(object):
 
     def fields(self):
         return list(self.fields.keys())
+    
+    def to(self, device):
+        for k, v in self.fields.items():
+            self.fields[k] = v.to(device)
+        return self
 
     def set_size(self, size):
         for k, v in self.fields.items():

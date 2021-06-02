@@ -1,9 +1,10 @@
 import torch
 import torchvision
 
-from utils.data.structure.bounding_box import BoxList
-from utils.data.structure.semantic_segmentation import get_semseg, SemanticSegmentation
+from utils.data.structure.bbox import BoxList
+from utils.data.structure.semseg import get_semseg, SemanticSegmentation
 from utils.data.structure.parsing import get_parsing, Parsing
+from utils.data.structure.target import Target
 
 __all__ = ["ParsingDataset"]
 
@@ -30,7 +31,7 @@ class ParsingDataset(torchvision.datasets.coco.CocoDetection):
         super(ParsingDataset, self).__init__(root, ann_file)
 
         # get image ids and filter images without detection annotations
-        self._ids = sorted(self.ids)
+        self.ids = sorted(self.ids)
         if filter_no_anno == True:
             ids = []
             for img_id in self.ids:
@@ -38,48 +39,47 @@ class ParsingDataset(torchvision.datasets.coco.CocoDetection):
                 anno = self.coco.loadAnns(ann_ids)
                 if has_valid_annotation(anno):
                     ids.append(img_id)
-            self._ids = ids
-
+            self.ids = ids
         # get id to img map
-        self._id_to_img_map = {k: v for k, v in enumerate(self._ids)}
-        
-        # get classes
-        category_ids = self.coco.getCatIds()
-        categories = [c['name'] for c in self.coco.loadCats(category_ids)]
-        self._categories = ['__background__'] + categories
-
-
+        self.id_to_img_map = {k: v for k, v in enumerate(self.ids)}
         # get transforms
-        self._transforms = transforms   
+        self._transforms = transforms
 
     def __getitem__(self, idx):
         img, anno = super(ParsingDataset, self).__getitem__(idx)
 
+        # target: all label
+        target = Target()
+
         # bbox label
-        boxes = [obj["bbox"] for obj in anno]
-        boxes = torch.as_tensor(boxes).reshape(-1, 4)
-        target = BoxList(boxes, img.size, mode="xywh").convert("xyxy")
+        bboxes_anno = [obj["bbox"] for obj in anno]
+        bboxes_anno = torch.as_tensor(bboxes_anno).reshape(-1, 4)
+        bboxes = BoxList(bboxes_anno, img.size, mode="xywh").convert_mode("xyxy")
+        target.add_field('bboxes', bboxes)
 
         # semseg label
         semsegs_anno = get_semseg(self.root, self.coco.loadImgs(self.ids[idx])[0]['file_name'])
-        semsegs = SemanticSegmentation(semsegs_anno, self._categories, img.size, mode='pic')
+        semsegs = SemanticSegmentation(semsegs_anno, img.size, mode='pic')
         target.add_field("semsegs", semsegs)
 
         # parsing label
-        parsing = [get_parsing(self.root, obj["parsing"]) for obj in anno]
-        parsing = Parsing(parsing, img.size)
+        parsing_anno = [get_parsing(self.root, obj["parsing"]) for obj in anno]
+        parsing = Parsing(parsing_anno, img.size)
         target.add_field("parsing", parsing)
 
         # transform for img and target
         if self._transforms is not None:
-            img, label = self._transforms(img, target)
+            img, target = self._transforms(img, target)
+        
+        # check the bbox location in image
+        target.add_field("bboxes", target.get_field("bboxes").clip_to_image())
 
-        return img, label, idx
+        return img, target, idx
 
     def __len__(self):
-        return len(self._ids)
+        return len(self.ids)
 
     def get_img_info(self, index):
-        img_id = self._id_to_img_map[index]
+        img_id = self.id_to_img_map[index]
         img_data = self.coco.imgs[img_id]
         return img_data
