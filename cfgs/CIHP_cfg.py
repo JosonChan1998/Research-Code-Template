@@ -7,8 +7,10 @@ class Config(object):
     # ---------------------------------------------------------------------------- #
     
     # dataset root
-    ROOT = "/home/sunyanxiao/josonchan/CIHP/train_img"
-    ANN_ILE = "/home/sunyanxiao/josonchan/CIHP/CIHP_train.json"
+    TRAIN_ROOT = "/home/sunyanxiao/josonchan/CIHP/train_img"
+    TRAIN_ANN_ILE = "/home/sunyanxiao/josonchan/CIHP/CIHP_train.json"
+    TEST_ROOT = "/home/sunyanxiao/josonchan/CIHP/val_img"
+    TEST_ANN_FILE = "/home/sunyanxiao/josonchan/CIHP/CIHP_val.json"
 
     # Trainset options
     DATALOADER_SAMPLER_TRAIN = "DistributedSampler"
@@ -19,7 +21,7 @@ class Config(object):
 
     # Testset options
     TEST_IMS_PER_GPU = 1
-    TEST_LOADER_THREADS = 1
+    TEST_LOADER_THREADS = 4
     TEST_SIZE_DIVISIBILITY = 32
 
     # ---------------------------------------------------------------------------- #
@@ -39,12 +41,12 @@ class Config(object):
     TRAIN_LEFT_RIGHT = ()
 
     # Resize 
-    TRAIN_SCALE = (600,)
-    TRAIN_MAX_SIZE = 1000
+    TRAIN_SCALE = (512, 640, 704, 768, 800, 864)
+    TRAIN_MAX_SIZE = 1400
     TRAIN_RESIZE_SCALE_RATIOS = (0.8, 1.2)
 
-    TEST_SCALE = 600
-    TEST_MAX_SIZE = 1000
+    TEST_SCALE = 800
+    TEST_MAX_SIZE = 1333    
     TEST_FORCE_TEST_SCALE = [-1, -1]
 
     # Random Crop options
@@ -52,6 +54,25 @@ class Config(object):
     TRAIN_RANDOM_CROP_CROP_SCALES = ([640, 640], )
     TRAIN_RANDOM_CROP_IOU_THS = (0.9, 0.7, 0.5, 0.3, 0.1)
     TRAIN_RANDOM_CROP_PAD_PIXEL = ()
+
+    # ---------------------------------------------------------------------------- #
+    # Model options
+    # ---------------------------------------------------------------------------- #
+
+    # ResNet
+    RESNET_USE_ALIGN = False
+    RESNET_BOTTLENECK = True
+    RESNET_STRIDE_3X3 = False
+    RESNET_AVG_DOWN = False
+    RESNET_LAYERS = (3, 4, 6, 3)
+    RESNET_WIDTH = 64
+    RESNET_STAGE_WITH_CONTEXT = ('none', 'none', 'none', 'none')
+    RESNET_CTX_RATIO = 0.0625
+    RESNET_STAGE_WITH_CONV = ('normal', 'normal', 'normal', 'normal')
+    RESNET_C5_DILATION = 1 # may be litte different from resnet
+    RESNET_USE_3x3x3HEAD = False
+    RESNET_FREEZE_AT = 2
+
 
     # ---------------------------------------------------------------------------- #
     # Solver options
