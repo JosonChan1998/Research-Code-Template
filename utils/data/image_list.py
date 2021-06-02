@@ -1,6 +1,5 @@
 import torch
 
-
 class ImageList(object):
     """
     Structure that holds a list of images (of possibly
@@ -39,7 +38,7 @@ def to_image_list(tensors, size_divisible=0):
     elif isinstance(tensors, torch.Tensor):
         # single tensor shape can be inferred
         if tensors.dim() == 3:
-            tensors = tensors[None]
+            tensors = tensors.unsqueeze(0)
         assert tensors.dim() == 4
         image_sizes = [tensor.shape[-2:] for tensor in tensors]
         return ImageList(tensors, image_sizes)

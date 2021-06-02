@@ -11,10 +11,7 @@ __all__ = ["get_train_data_loader", "get_test_data_loader"]
 
 def make_data_sampler(dataset, shuffle, distributed):
     if distributed:
-        if cfg.DATALOADER_SAMPLER_TRAIN == "RepeatFactorTrainingSampler":
-            return samplers.RepeatFactorTrainingSampler(dataset, cfg.DATALOADER.RFTSAMPLER, shuffle=shuffle)
-        else:
-            return samplers.DistributedSampler(dataset, shuffle=shuffle)
+        return samplers.DistributedSampler(dataset, shuffle=shuffle)
 
     if shuffle:
         sampler = torch.utils.data.sampler.RandomSampler(dataset)
@@ -61,7 +58,7 @@ def make_batch_data_sampler(
 
 def get_train_data_loader(datasets, is_distributed=False, start_iter=0):
 
-    if dist.is_available() or dist.is_initialized():
+    if not (dist.is_available() and dist.is_initialized()):
         num_gpus = 1
     else:
         num_gpus = dist.get_world_size()
@@ -91,13 +88,13 @@ def get_train_data_loader(datasets, is_distributed=False, start_iter=0):
     return data_loader
 
 def get_test_data_loader(datasets, start_ind, end_ind, is_distributed=True):
-    ims_per_gpu = cfg.TEST.IMS_PER_GPU
+    ims_per_gpu = cfg.TEST_IMS_PER_GPU
     if start_ind == -1 or end_ind == -1:
         test_sampler = torch.utils.data.distributed.DistributedSampler(datasets) if is_distributed else None
     else:
         test_sampler = samplers.RangeSampler(start_ind, end_ind)
-    num_workers = cfg.TEST.LOADER_THREADS
-    collator = BatchCollator(cfg.TEST.SIZE_DIVISIBILITY)
+    num_workers = cfg.TEST_LOADER_THREADS
+    collator = BatchCollator(cfg.TEST_SIZE_DIVISIBILITY)
     data_loader = torch.utils.data.DataLoader(
         datasets,
         batch_size=ims_per_gpu,

@@ -14,6 +14,5 @@ dataset = ParsingDataset(cfg.ROOT, cfg.ANN_ILE, filter_no_anno=True, transforms=
 train_data_loader = get_train_data_loader(dataset, is_distributed=False)
 
 for iteration, (images, targets, _) in enumerate(train_data_loader):
-    
-    print(iteration)
+    pass
 
