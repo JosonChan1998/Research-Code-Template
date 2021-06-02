@@ -24,7 +24,7 @@ class Parsing(object):
 
         if len(parsing.shape) == 2:
             # if only a single instance mask is passed
-            parsing = parsing[None]
+            parsing = parsing.unsqueeze(0)
 
         assert len(parsing.shape) == 3
         assert parsing.shape[1] == size[1], "%s != %s" % (parsing.shape[1], size[1])

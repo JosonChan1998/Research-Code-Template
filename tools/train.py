@@ -1,9 +1,10 @@
 from numpy.lib.type_check import imag
+import torch
 import init_paths
 
 from cfgs.CIHP_cfg import cfg
 
-from datasets.dataset import ParsingDataset
+from datasets.new_dataset import ParsingDataset
 from datasets.transforms import build_transforms
 from datasets.dataloader import get_train_data_loader
 
@@ -15,5 +16,4 @@ train_data_loader = get_train_data_loader(dataset, is_distributed=False)
 for iteration, (images, targets, _) in enumerate(train_data_loader):
     
     print(iteration)
-    print(images, targets)
 

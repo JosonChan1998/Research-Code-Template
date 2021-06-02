@@ -1,14 +1,14 @@
 import random
-from PIL import Image
-
 import torchvision
+from PIL import Image
 from torchvision.transforms import functional as F
 
-from cfgs.CIHP_cfg import cfg
 from utils.data.boxlist_ops import remove_boxes_by_center, remove_boxes_by_overlap
+from cfgs.CIHP_cfg import cfg
 
 __all__ = ["build_transforms"]
 
+# all class add return target option
 class Compose(object):
     def __init__(self, transforms):
         self.transforms = transforms
@@ -30,7 +30,7 @@ class Compose(object):
 class Resize(object):
     def __init__(self, min_size, max_size, preprocess_type, scale_ratios,
                  force_test_scale=[-1, -1]):
-        assert preprocess_type in ["none", "random_crop"]
+        assert preprocess_type in ["none", "random_resize"]
         assert not (preprocess_type == "none" and min_size == -1)
 
         if not isinstance(min_size, (list, tuple)):
@@ -59,23 +59,24 @@ class Resize(object):
     # modified from torchvision to add support for max size
     def get_size(self, image_size):
         w, h = image_size
-        size = random.choice(self.min_size)
+        min_size = random.choice(self.min_size)
         max_size = self.max_size
+
         if max_size is not None:
             min_original_size = float(min((w, h)))
             max_original_size = float(max((w, h)))
-            if max_original_size / min_original_size * size > max_size:
-                size = int(round(max_size * min_original_size / max_original_size))
+            if max_original_size / min_original_size * min_size > max_size:
+                min_size = int(round(max_size * min_original_size / max_original_size))
 
-        if (w <= h and w == size) or (h <= w and h == size):
+        if (w <= h and w == min_size) or (h <= w and h == min_size):
             return (h, w)
 
         if w < h:
-            ow = size
-            oh = int(size * h / w)
+            ow = min_size
+            oh = int(min_size * h / w)
         else:
-            oh = size
-            ow = int(size * w / h)
+            oh = min_size
+            ow = int(min_size * w / h)
 
         return (oh, ow)
 
@@ -84,10 +85,10 @@ class Resize(object):
             size = tuple(self.force_test_scale)
         else:
             size = self.get_size(image.size)
-            if self.preprocess_type == "random_crop":
+            if self.preprocess_type == "random_resize":
                 size = self.reset_size(image.size, size)
         image = F.resize(image, size)
-        target = target.resize(image.size)
+        target = target.resize(size)
         return image, target
 
 
@@ -129,16 +130,27 @@ class RandomCrop(object):
         return img
 
     def targets_crop(self, targets, crop_region, crop_shape):
+        # label move
         set_left, set_up, right, bottom = crop_region
         targets = targets.move((set_left, set_up))
+
+        # determine the bbox or parsing bbox is in the crop_image
         reset_region = (0, 0, min(right-min(set_left, 0), crop_shape[0])-1,
                         min(bottom-min(set_up, 0), crop_shape[1])-1)
+        targets.add_field("bboxes", 
+                            remove_boxes_by_center(
+                            targets.get_field("bboxes"), 
+                            reset_region))
 
-        targets = remove_boxes_by_center(targets, reset_region)
         crop_targets = targets.crop(reset_region)
-        iou_th = random.choice(self.iou_ths)
-        targets = remove_boxes_by_overlap(targets, crop_targets, iou_th)
 
+        # determine the bbox iou greater than iou_th
+        iou_th = random.choice(self.iou_ths)
+        targets.add_field("bboxes",
+                            remove_boxes_by_overlap(
+                            targets.get_field("bboxes"), 
+                            crop_targets, iou_th))
+                            
         targets = targets.set_size(crop_shape)
         return targets
 
@@ -159,11 +171,11 @@ class RandomHorizontalFlip(object):
         self.prob = prob
         self.left_right = left_right
 
-    def __call__(self, image, target):
+    def __call__(self, image, targets):
         if random.random() < self.prob:
             image = F.hflip(image)
-            target = target.transpose(0, self.left_right)
-        return image, target
+            targets = targets.transpose(method=0)
+        return image, targets
 
 
 class ColorJitter(object):
@@ -241,7 +253,6 @@ def build_transforms(is_train=True):
 
         # for random crop
         preprocess_type = "none"
-
         crop_sizes = ()
         pad_pixel = ()
         crop_iou_ths = ()

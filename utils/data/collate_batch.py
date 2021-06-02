@@ -1,4 +1,4 @@
-from utils.data.structure.image_list import to_image_list
+from utils.data.image_list import to_image_list
 
 
 class BatchCollator(object):
